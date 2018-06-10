@@ -23,19 +23,16 @@ unsigned short chsum(unsigned short *ptr, int nbytes);
 
 int main(int argc, char **argv)
 {
-    if (argc < 3)
+    if (argc<3)
     {
         printf("Użycie: %s <źródłowy IP> <docelowy IP> [-a], spróbuj ponownie.\n", argv[0]);
         exit(0);
     }
 
-    unsigned long daddr;
-    unsigned long saddr;
+    unsigned long daddr = inet_addr(argv[1]);
+    unsigned long saddr = inet_addr(argv[2]);
 
-    saddr = inet_addr(argv[1]);
-    daddr = inet_addr(argv[2]);
-
-    int payload_size = 0, sent, sent_size;
+    int payload_size = 0, sent, sent_size, sent_total = 1000000;
 
     int sockfd = socket (AF_INET, SOCK_RAW, IPPROTO_ICMP);
 
@@ -67,7 +64,7 @@ int main(int argc, char **argv)
 
     if (!packet)
     {
-        perror("brak alokowania pamięci");
+        perror("błąd alokowania pamięci");
         close(sockfd);
         return (0);
     }
@@ -79,57 +76,44 @@ int main(int argc, char **argv)
     //rezerwacja pamieci dla pakietu
     memset (packet, 0, packet_size);
 
-//    while(choice!='t'&&choice!='n'){
-//    	printf("\nCzy edytować wartości domyślne parametrów pakietu? t/n\nWybór: ");
-//    	choice=getchar();
-//    }
+    printf("######################################\n");
+    printf("#\tsendip-ipv4-icmp             #\n#\tWersja v1.0                  #\n#\tWykonał Patryk Sikora        #\n");
+    printf("######################################\n");
 
     if(argc<4){
-    ip->version = 4;
-    ip->ihl = 5;
     ip->tos = 0;
-    ip->tot_len = htons (packet_size);
-    ip->id = rand ();
     ip->frag_off = 0;
     ip->ttl = 255;
+    icmp->type = ICMP_ECHO;
+    icmp->code = 0;
+    icmp->un.echo.id = rand();
+    }else if(strcmp(argv[3],"-a") == 0){
+    	printf("\nPodaj ilość pakietów do wysłania: ");
+    	scanf("%d",&sent_total);
+    	printf("Podaj TOS: ");
+    	scanf("%d",&ip->tos);
+    	printf("Fragment offset: ");
+    	scanf("%d",&ip->frag_off);
+    	printf("Podaj TTL (0-255): ");
+    	scanf("%d",&ip->ttl);
+    	printf("Podaj typ ICMP: ");
+    	scanf("%d",&icmp->type);
+    	printf("Podaj kod ICMP: ");
+    	scanf("%d",&icmp->code);
+    	printf("Podaj id pakietu ICMP: ");
+    	scanf("%d",&icmp->un.echo.id);
+    }
+
+    ip->version = 4;
+    ip->id = rand();
     ip->protocol = IPPROTO_ICMP;
     ip->saddr = saddr;
     ip->daddr = daddr;
+    ip->tot_len = htons (packet_size);
+    ip->ihl = 5;
     ip->check = chsum ((u16 *) ip, sizeof (struct iphdr));
-    icmp->type = ICMP_ECHO;
-    icmp->code = 0;
     icmp->un.echo.sequence = rand();
-    icmp->un.echo.id = rand();
-    //checksum
     icmp->checksum = 0;
-    }else if(strcmp(argv[3],"-a") == 0){
-    	printf("\nPodaj wielkość PAYLOAD: ");
-    	payload_size = scanf("%d");
-    	printf("\nPodaj wersję IP: ");
-    	ip->version = 4;
-    	printf("\nPodaj IHL: ");
-    	ip->ihl = 5;
-    	printf("\nPodaj TOS: ");
-    	ip->tos = 0;
-    	printf("\nPodaj wielkość pakietu: ");
-    	ip->tot_len = htons (packet_size);
-    	printf("\nPodaj ID pakietu: ");
-    	ip->id = rand ();
-    	printf("\nFragmentacja pakietu (0/1): ");
-    	ip->frag_off = 0;
-    	printf("\nPodaj TTL: ");
-    	ip->ttl = 255;
-    	ip->protocol = IPPROTO_ICMP;
-    	ip->saddr = saddr;
-    	ip->daddr = daddr;
-    	    //ip->check = chsum ((u16 *) ip, sizeof (struct iphdr));
-    	    icmp->type = ICMP_ECHO;
-    	    icmp->code = 0;
-    	    icmp->un.echo.sequence = rand();
-    	    icmp->un.echo.id = rand();
-    	    //checksum
-    	    icmp->checksum = 0;
-    }
 
     struct sockaddr_in servaddr;
     servaddr.sin_family = AF_INET;
@@ -138,7 +122,7 @@ int main(int argc, char **argv)
 
     printf("\nWYSYŁANIE...\n");
 
-    while (1)
+    while (sent<sent_total)
     {
         memset(packet + sizeof(struct iphdr) + sizeof(struct icmphdr), rand() % 255, payload_size);
 
@@ -157,6 +141,8 @@ int main(int argc, char **argv)
 
         usleep(100000);  //microseconds
     }
+
+    printf("WYSŁANO %d PAKIETÓW\n\n", sent_total);
 
     free(packet);
     close(sockfd);
