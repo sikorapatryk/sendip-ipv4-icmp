@@ -25,21 +25,17 @@ int main(int argc, char **argv)
 {
     if (argc < 3)
     {
-        printf("użycie: %s <źródłowy IP> <docelowy IP> [wielkość payload]\n", argv[0]);
+        printf("Użycie: %s <źródłowy IP> <docelowy IP> [-a], spróbuj ponownie.\n", argv[0]);
         exit(0);
     }
 
     unsigned long daddr;
     unsigned long saddr;
-    int payload_size = 0, sent, sent_size;
 
     saddr = inet_addr(argv[1]);
     daddr = inet_addr(argv[2]);
 
-    if (argc > 3)
-    {
-        payload_size = atoi(argv[3]);
-    }
+    int payload_size = 0, sent, sent_size;
 
     int sockfd = socket (AF_INET, SOCK_RAW, IPPROTO_ICMP);
 
@@ -52,14 +48,14 @@ int main(int argc, char **argv)
     int on = 1;
 
     // generowanie naglowka IP
-    if (setsockopt (sockfd, IPPROTO_IP, IP_HDRINCL, (const char*)&on, sizeof (on)) == -1)
+    if (setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (const char*)&on, sizeof (on)) == -1)
     {
         perror("błąd generowania nagłówka ip");
         return (0);
     }
 
     //pozwolenie na wysylanie do adresow broadcast
-    if (setsockopt (sockfd, SOL_SOCKET, SO_BROADCAST, (const char*)&on, sizeof (on)) == -1)
+    if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, (const char*)&on, sizeof (on)) == -1)
     {
         perror("błąd uprawnień");
         return (0);
@@ -83,6 +79,12 @@ int main(int argc, char **argv)
     //rezerwacja pamieci dla pakietu
     memset (packet, 0, packet_size);
 
+//    while(choice!='t'&&choice!='n'){
+//    	printf("\nCzy edytować wartości domyślne parametrów pakietu? t/n\nWybór: ");
+//    	choice=getchar();
+//    }
+
+    if(argc<4){
     ip->version = 4;
     ip->ihl = 5;
     ip->tos = 0;
@@ -93,21 +95,48 @@ int main(int argc, char **argv)
     ip->protocol = IPPROTO_ICMP;
     ip->saddr = saddr;
     ip->daddr = daddr;
-    //ip->check = chsum ((u16 *) ip, sizeof (struct iphdr));
-
+    ip->check = chsum ((u16 *) ip, sizeof (struct iphdr));
     icmp->type = ICMP_ECHO;
     icmp->code = 0;
     icmp->un.echo.sequence = rand();
     icmp->un.echo.id = rand();
     //checksum
     icmp->checksum = 0;
+    }else if(strcmp(argv[3],"-a") == 0){
+    	printf("\nPodaj wielkość PAYLOAD: ");
+    	payload_size = scanf("%d");
+    	printf("\nPodaj wersję IP: ");
+    	ip->version = 4;
+    	printf("\nPodaj IHL: ");
+    	ip->ihl = 5;
+    	printf("\nPodaj TOS: ");
+    	ip->tos = 0;
+    	printf("\nPodaj wielkość pakietu: ");
+    	ip->tot_len = htons (packet_size);
+    	printf("\nPodaj ID pakietu: ");
+    	ip->id = rand ();
+    	printf("\nFragmentacja pakietu (0/1): ");
+    	ip->frag_off = 0;
+    	printf("\nPodaj TTL: ");
+    	ip->ttl = 255;
+    	ip->protocol = IPPROTO_ICMP;
+    	ip->saddr = saddr;
+    	ip->daddr = daddr;
+    	    //ip->check = chsum ((u16 *) ip, sizeof (struct iphdr));
+    	    icmp->type = ICMP_ECHO;
+    	    icmp->code = 0;
+    	    icmp->un.echo.sequence = rand();
+    	    icmp->un.echo.id = rand();
+    	    //checksum
+    	    icmp->checksum = 0;
+    }
 
     struct sockaddr_in servaddr;
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = daddr;
     memset(&servaddr.sin_zero, 0, sizeof(servaddr.sin_zero));
 
-    puts("WYSYŁANIE...");
+    printf("\nWYSYŁANIE...\n");
 
     while (1)
     {
