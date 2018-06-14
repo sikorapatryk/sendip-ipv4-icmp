@@ -12,6 +12,6 @@ The script is available through the github repository (https://github.com/sikora
 ```make```
 
 2. Run with params:  
-```./sendip-ipv4-icmp <source IP> <destination IP>``` 
+```./sendip-ipv4-icmp <source IP> <destination IP> [interface]``` 
 > or execute in advanced mode:
-```./sendip-ipv4-icmp <source IP> <destination IP> [-a]```
+```./sendip-ipv4-icmp <source IP> <destination IP> [interface] [-a]```
