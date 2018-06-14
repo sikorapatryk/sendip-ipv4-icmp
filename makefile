@@ -1,2 +1,2 @@
 all:
-	gcc src/sendip-ipv4-icmp.cpp -o sendip-ipv4-icmp -w
+	gcc src/sendip-ipv4-icmp.cpp -o sendip-ipv4-icmp -ldl -w

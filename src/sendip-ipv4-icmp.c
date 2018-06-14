@@ -15,18 +15,26 @@
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
 #include <unistd.h>
+#include <dlfcn.h>
+#include "biblioteka.h"
 
 typedef unsigned char u8;
 typedef unsigned short int u16;
+void *Biblioteka; // wskaznik do bilbioteki
 
 unsigned short chsum(unsigned short *ptr, int nbytes);
 
 int main(int argc, char **argv) {
 
-	printf("######################################\n");
-	printf(
-			"#\tsendip-ipv4-icmp             #\n#\tWersja v1.0                  #\n#\tWykonał Patryk Sikora        #\n");
-	printf("######################################\n");
+	Biblioteka = dlopen("/home/patryk/workspace/sendip-ipv4-icmp/src/biblioteka.so", RTLD_NOW);
+	  	if (!Biblioteka) {
+	  		printf("Error otwarcia: %s\n", dlerror());
+	  		return (1);
+	  	}
+
+	  	typedef void (*Funkcja1)();
+	  	Funkcja1 start = (Funkcja1)dlsym(Biblioteka, "start");
+	  	start();
 
 	if (argc < 3) {
 		printf(
