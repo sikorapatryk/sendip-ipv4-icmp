@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
+#include <net/if.h>
 #include <unistd.h>
 #include <dlfcn.h>
 #include "biblioteka.h"
@@ -36,9 +37,11 @@ int main(int argc, char **argv) {
 	  	Funkcja1 start = (Funkcja1)dlsym(Biblioteka, "start");
 	  	start();
 
+
+
 	if (argc < 3) {
 		printf(
-				"\nUżycie: %s <źródłowy IP> <docelowy IP> [-a], spróbuj ponownie.\n",
+				"\nUżycie: %s <źródłowy IP> <docelowy IP> [interfejs] [-a], spróbuj ponownie.\n",
 				argv[0]);
 		exit(0);
 	}
@@ -50,14 +53,16 @@ int main(int argc, char **argv) {
 
 	int sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 
+
 	if (sockfd < 0) {
-		perror("błąd otwarcia socketu");
+		perror("błąd otwarcia socketu, użyj sudo");
 		return (0);
 	}
 
+
 	int on = 1;
 
-	// generowanie naglowka IP
+	// dolaczenie naglowka IP
 	if (setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, (const char*) &on,
 			sizeof(on)) == -1) {
 		perror("błąd generowania nagłówka ip");
@@ -82,6 +87,14 @@ int main(int argc, char **argv) {
 		return (0);
 	}
 
+	struct ifreq ifr;
+
+				memset(&ifr, 0, sizeof(ifr));
+				snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), argv[3]);
+				if (setsockopt(sockfd, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
+					perror("błąd wybierania interfejsu, użyto domyślnego");
+				}
+
 	//struktura naglowka ip
 	struct iphdr *ip = (struct iphdr *) packet;
 	struct icmphdr *icmp = (struct icmphdr *) (packet + sizeof(struct iphdr));
@@ -89,14 +102,14 @@ int main(int argc, char **argv) {
 	//wypełnia pamięć bajtem
 	memset(packet, 0, packet_size);
 
-	if (argc < 4) {
+	if (argc < 5) {
 		ip->tos = 0;
 		ip->frag_off = 0;
 		ip->ttl = 255;
 		icmp->type = ICMP_ECHO;
 		icmp->code = 0;
 		icmp->un.echo.id = rand();
-	} else if (strcmp(argv[3], "-a") == 0) {
+	} else if (strcmp(argv[4], "-a") == 0) {
 		printf("\nPodaj ilość pakietów do wysłania: ");
 		scanf("%d", &sent_total);
 		printf("Podaj TOS: ");
@@ -125,8 +138,9 @@ int main(int argc, char **argv) {
 	icmp->checksum = 0;
 
 	struct sockaddr_in servaddr;
+	//servaddr.sin_addr.s_addr= inet_addr("10.0.2.15");
 	servaddr.sin_family = AF_INET;
-	servaddr.sin_port = 1234;
+	servaddr.sin_port = saddr;
 	servaddr.sin_addr.s_addr = daddr;
 	memset(&servaddr.sin_zero, 0, sizeof(servaddr.sin_zero));
 
