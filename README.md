@@ -1,6 +1,6 @@
 # sendip-ipv4-icmp
 
-The goal of the project task for Programming in C(2) labs in Military University of Technology is to create an application that allows you to send IPv4+ICMP packet.
+The goal of the project task for Programming in C(2) labs in Military University of Technology was to create an application that allows you to send IPv4+ICMP packet.
 
 ## Usage
 
